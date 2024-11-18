@@ -93,7 +93,7 @@
 ;;;###autoload
 (defun pdf-tools-pages-extract-selected-pages (file)
   "Save pages selected in `pdf-tools-pages-selected-pages' to FILE."
-  (interactive)
+  (interactive "FOutput file: ")
   (pdf-tools-pages-ensure-selection)
   (pdf-tools-pages-execute-qpdf pdf-tools-pages-selected-pages file)
   (pdf-tools-pages-clear-page-selection))
