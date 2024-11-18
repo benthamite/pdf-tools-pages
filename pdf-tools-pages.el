@@ -81,6 +81,7 @@
   "Return the current selection of pages as a string."
   (format "Current selection: %s." pdf-tools-pages-selected-pages))
 
+;;;###autoload
 (defun pdf-tools-pages-clear-page-selection ()
   "Clear the list of pages selected in `pdf-tools-pages-selected-pages'."
   (interactive)
@@ -89,6 +90,7 @@
 
 ;;;;; Extraction & deletion
 
+;;;###autoload
 (defun pdf-tools-pages-extract-selected-pages (file)
   "Save pages selected in `pdf-tools-pages-selected-pages' to FILE."
   (interactive)
@@ -96,6 +98,7 @@
   (pdf-tools-pages-execute-qpdf pdf-tools-pages-selected-pages file)
   (pdf-tools-pages-clear-page-selection))
 
+;;;###autoload
 (defun pdf-tools-pages-delete-selected-pages ()
   "Delete pages selected in `pdf-tools-pages-selected-pages' from current file."
   (interactive)
