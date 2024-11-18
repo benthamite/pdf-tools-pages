@@ -1,0 +1,80 @@
+#+title: pdf-tools-pages
+
+** Introduction
+:PROPERTIES:
+:ID:       4A8A223D-79FA-4D58-A1B8-EAAA6C0FA843
+:END:
+
+This is a very simple extension for [[https://github.com/vedang/pdf-tools][pdf-tools]] that supports (1) extracting a selection of pages from a PDF into a new file and (2) deleting a selection of pages from the current PDF.
+
+** Requirements
+:PROPERTIES:
+:ID:       65150A43-0D62-454D-8F0A-D11CBE6B6858
+:END:
+
+This package requires [[https://github.com/qpdf/qpdf][qpdf]].
+
+** Installation
+:PROPERTIES:
+:ID:       87EB5F3F-5F66-4226-96C7-25188113FBAB
+:END:
+
+*** Manual installation
+:PROPERTIES:
+:ID:       90C3E754-E5C3-4406-A48E-24B932279F6C
+:END:
+
+Clone this repository and add this to your =init.el= file:
+
+#+begin_src emacs-lisp
+(add-to-list 'load-path "path/to/pdf-tools-pages")
+#+end_src
+
+Where ="path/to/pdf-tools-pages"= is the path to the local repository you just cloned.
+
+*** Package managers
+:PROPERTIES:
+:ID:       D8EC85D1-23DB-4E1F-B85A-7260441A9BFA
+:END:
+
+If you use a package manager, or Emacs +30, you just need to add this your =init.el= file:
+
+#+begin_src emacs-lisp
+;; with vc (Emacs 30 or later)
+(use-package pdf-tools-pages
+  :vc (:url "https://github.com/benthamite/pdf-tools-pages")
+  :after pdf-tools)
+
+;; with elpaca
+(use-package pdf-tools-pages
+  :ensure (:host github :repo "benthamite/pdf-tools-pages")
+  :after pdf-tools)
+
+;; with straight
+(use-package pdf-tools-pages
+  :straight (:host github :repo "benthamite/pdf-tools-pages")
+  :after pdf-tools)
+
+;; with quelpa
+(use-package pdf-tools-pages
+  :quelpa (pdf-tools-pages :fetcher github :repo "benthamite/pdf-tools-pages")
+  :after pdf-tools)
+#+end_src
+
+** Usage
+:PROPERTIES:
+:ID:       5461115B-C7B1-4473-932D-DFFEFC77C512
+:END:
+
+=M-x pdf-tools-pages-dwim= to select the pages.
+
+Then
+- =pdf-tools-extras-extract-selected-pages= to extract the selected pages to a new PDF.
+- =pdf-tools-extras-delete-selected-pages= to delete the selected pages from the current PDF.
+
+** Troubleshooting
+:PROPERTIES:
+:ID:       29953F58-13B4-4C84-827C-B1098D1BF205
+:END:
+
+The package has not been extensively tested. If you encounter any problems, feel free to open an issue.
