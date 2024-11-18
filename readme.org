@@ -66,7 +66,7 @@ If you use a package manager, or Emacs +30, you just need to add this your =init
 :ID:       5461115B-C7B1-4473-932D-DFFEFC77C512
 :END:
 
-=M-x pdf-tools-pages-dwim= to select the pages.
+=M-x pdf-tools-pages-select-dwim= to add the current page to the selection, or to remove it if already selected.
 
 Then
 - =pdf-tools-extras-extract-selected-pages= to extract the selected pages to a new PDF.

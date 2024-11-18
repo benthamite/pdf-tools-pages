@@ -37,7 +37,7 @@
 ;;;; Functions
 
 ;;;###autoload
-(defun pdf-tools-pages-dwim ()
+(defun pdf-tools-pages-select-dwim ()
   "Add current page to the selection, or remove it if already included."
   (interactive)
   (pdf-tools-pages-ensure-qpdf)
