@@ -1,4 +1,4 @@
-;;; pdf-tools-pages.el --- Extract and delete PDF \(?$:\(.\|\n\)*?\)pages -*- lexical-binding: t -*-
+;;; pdf-tools-pages.el --- Extract and delete pages in PDF documents -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2024
 
@@ -23,7 +23,7 @@
 
 ;;; Commentary:
 
-;; Simple `pdf-tools' extension to extract and delete PDF pages.
+;; Simple `pdf-tools' extension to extract and delete pages in PDF documents.
 
 ;;; Code:
 
