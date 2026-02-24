@@ -19,6 +19,8 @@ This manual describes the features and customization options for the Emacs Lisp 
 
 =pdf-tools-pages.el= extends =pdf-tools=, the Emacs PDF viewer, with page-level manipulation capabilities. While =pdf-tools= provides excellent support for viewing, annotating, and searching PDF documents, it does not offer built-in commands for structural operations such as extracting a subset of pages into a new file or removing unwanted pages from an existing document. =pdf-tools-pages= fills this gap.
 
+The development repository is on [[https://github.com/benthamite/pdf-tools-pages][GitHub]].
+
 The package provides a simple two-phase workflow:
 
 1. *Select pages.* Navigate through the PDF and toggle pages into a selection set using a single DWIM command. The selection is maintained per buffer, so you can work with multiple PDFs simultaneously without interference.

@@ -1,0 +1,333 @@
+\input texinfo    @c -*- texinfo -*-
+@c %**start of header
+@setfilename pdf-tools-pages.info
+@settitle pdf-tools-pages: Extract and delete pages in PDF documents
+@documentencoding UTF-8
+@documentlanguage en
+@c %**end of header
+
+@dircategory Emacs misc features
+@direntry
+* pdf-tools-pages: (pdf-tools-pages). Extract and delete pages in PDF documents.
+@end direntry
+
+@finalout
+@titlepage
+@title pdf-tools-pages: Extract and delete pages in PDF documents
+@author Pablo Stafforini (@email{pablo@@stafforini.com})
+@end titlepage
+
+@contents
+
+@ifnottex
+@node Top
+@top pdf-tools-pages: Extract and delete pages in PDF documents
+
+This manual describes the features and customization options for the Emacs Lisp file @samp{pdf-tools-pages.el}.
+
+@end ifnottex
+
+@menu
+* Overview::
+* Installation::
+* Commands::
+* Functions::
+* Variables::
+* Troubleshooting::
+* Indices::
+
+@detailmenu
+--- The Detailed Node Listing ---
+
+Installation
+
+* Requirements::
+* Manual installation::
+* Package managers::
+
+Commands
+
+* Selecting pages::
+* Extracting and deleting pages::
+
+Functions
+
+* Guard functions::
+* Page selection helpers::
+* Executing qpdf::
+
+Variables
+
+* @code{pdf-tools-pages-selected-pages}::
+
+Troubleshooting
+
+* qpdf not found::
+* Command only works in pdf-view-mode::
+* Reporting issues::
+
+Indices
+
+* Function index::
+* Variable index::
+
+@end detailmenu
+@end menu
+
+@node Overview
+@chapter Overview
+
+@samp{pdf-tools-pages.el} extends @samp{pdf-tools}, the Emacs PDF viewer, with page-level manipulation capabilities. While @samp{pdf-tools} provides excellent support for viewing, annotating, and searching PDF documents, it does not offer built-in commands for structural operations such as extracting a subset of pages into a new file or removing unwanted pages from an existing document. @samp{pdf-tools-pages} fills this gap.
+
+The development repository is on @uref{https://github.com/benthamite/pdf-tools-pages, GitHub}.
+
+The package provides a simple two-phase workflow:
+
+@enumerate
+@item
+@strong{Select pages.} Navigate through the PDF and toggle pages into a selection set using a single DWIM command. The selection is maintained per buffer, so you can work with multiple PDFs simultaneously without interference.
+
+@item
+@strong{Act on the selection.} Either extract the selected pages to a new PDF file or delete them from the current document.
+@end enumerate
+
+Under the hood, page manipulation is performed by @uref{https://github.com/qpdf/qpdf, qpdf}, a mature command-line tool for structural, content-preserving transformations of PDF files. @samp{qpdf} must be installed separately.
+
+@node Installation
+@chapter Installation
+
+@menu
+* Requirements::
+* Manual installation::
+* Package managers::
+@end menu
+
+@node Requirements
+@section Requirements
+
+@samp{pdf-tools-pages} requires:
+
+@itemize
+@item
+Emacs 26.1 or later.
+@item
+@samp{pdf-tools} 1.0 or later, installed and configured.
+@item
+@uref{https://github.com/qpdf/qpdf, qpdf}, available on your system's @samp{PATH}.
+@end itemize
+
+On macOS, you can install @samp{qpdf} with Homebrew:
+
+@example
+brew install qpdf
+@end example
+
+On Debian/Ubuntu:
+
+@example
+sudo apt install qpdf
+@end example
+
+The package checks for the presence of @samp{qpdf} at runtime and signals a clear error if it is not found.
+
+@node Manual installation
+@section Manual installation
+
+Clone the repository and add it to your load path:
+
+@lisp
+(add-to-list 'load-path "path/to/pdf-tools-pages")
+(require 'pdf-tools-pages)
+@end lisp
+
+Replace @samp{"path/to/pdf-tools-pages"} with the actual path to your local clone.
+
+@node Package managers
+@section Package managers
+
+If you use a package manager, or Emacs 30 or later (which ships with @code{package-vc}), add the appropriate recipe to your @samp{init.el}:
+
+@lisp
+;; with vc (Emacs 30 or later)
+(use-package pdf-tools-pages
+  :vc (:url "https://github.com/benthamite/pdf-tools-pages")
+  :after pdf-tools)
+
+;; with elpaca
+(use-package pdf-tools-pages
+  :ensure (:host github :repo "benthamite/pdf-tools-pages")
+  :after pdf-tools)
+
+;; with straight
+(use-package pdf-tools-pages
+  :straight (:host github :repo "benthamite/pdf-tools-pages")
+  :after pdf-tools)
+
+;; with quelpa
+(use-package pdf-tools-pages
+  :quelpa (pdf-tools-pages :fetcher github :repo "benthamite/pdf-tools-pages")
+  :after pdf-tools)
+@end lisp
+
+The @samp{:after pdf-tools} clause ensures that @samp{pdf-tools-pages} is loaded only after @samp{pdf-tools} is available.
+
+@node Commands
+@chapter Commands
+
+@menu
+* Selecting pages::
+* Extracting and deleting pages::
+@end menu
+
+@node Selecting pages
+@section Selecting pages
+
+@findex pdf-tools-pages-select-dwim
+@findex pdf-tools-pages-clear-page-selection
+The primary entry point is @samp{M-x pdf-tools-pages-select-dwim}. This command toggles the current page in the selection: if the page is not yet selected, it adds it; if it is already selected, it removes it. After toggling, the command automatically advances to the next page (unless you are on the last page), which makes it convenient to walk through a document selecting or deselecting pages in sequence.
+
+Each invocation of @code{pdf-tools-pages-select-dwim} displays a message in the echo area confirming whether the page was added or removed, along with the full current selection. This gives you continuous feedback without needing to inspect a variable.
+
+The selection is maintained in the buffer-local variable @code{pdf-tools-pages-selected-pages} (@ref{@code{pdf-tools-pages-selected-pages}, , Variables}). Because the variable is buffer-local, each PDF buffer keeps its own independent selection. You can freely switch between PDF buffers without losing or mixing up your selections.
+
+If you want to discard the current selection and start over, use @samp{M-x pdf-tools-pages-clear-page-selection}. This resets the selection to an empty list and confirms the action in the echo area.
+
+A typical workflow looks like this:
+
+@enumerate
+@item
+Open a PDF in @samp{pdf-view-mode}.
+@item
+Navigate to a page you want to select and call @samp{M-x pdf-tools-pages-select-dwim}.
+@item
+Repeat for additional pages. The command advances automatically, so for consecutive pages you can simply invoke it repeatedly.
+@item
+Once your selection is complete, extract or delete the pages (@ref{Extracting and deleting pages}).
+@end enumerate
+
+You may find it convenient to bind @code{pdf-tools-pages-select-dwim} to a key in @code{pdf-view-mode-map}:
+
+@lisp
+(define-key pdf-view-mode-map (kbd "C-c s") #'pdf-tools-pages-select-dwim)
+@end lisp
+
+@node Extracting and deleting pages
+@section Extracting and deleting pages
+
+@findex pdf-tools-pages-extract-selected-pages
+@findex pdf-tools-pages-delete-selected-pages
+Once you have selected one or more pages (@ref{Selecting pages}), two commands let you act on the selection:
+
+@code{pdf-tools-pages-extract-selected-pages} prompts for an output file path and writes the selected pages to that file as a new PDF@. The original document is not modified. After a successful extraction, the selection is automatically cleared. This is useful when you want to pull specific pages out of a large document --- for example, extracting a single chapter from a book or a few relevant pages from a report.
+
+@code{pdf-tools-pages-delete-selected-pages} removes the selected pages from the current PDF file. Because this is a destructive operation, the command asks for explicit confirmation via @code{yes-or-no-p} before proceeding. The confirmation prompt displays the current selection so you can review which pages will be removed. After deletion, the buffer is automatically reverted to reflect the modified file, and the selection is cleared.
+
+Internally, deletion works by computing the complement of the selection (the pages to @emph{keep}) and asking @samp{qpdf} to rewrite the file with only those pages. The @samp{--replace-input} flag is used, which means @samp{qpdf} creates a temporary file and atomically replaces the original. Note that @samp{qpdf} leaves a backup file with the suffix @samp{.~qpdf-orig} alongside the original; the package does not remove this backup automatically.
+
+Both commands verify that the current buffer is in @code{pdf-view-mode} and that a non-empty selection exists before proceeding. If either condition is not met, a @code{user-error} is signaled.
+
+@node Functions
+@chapter Functions
+
+@menu
+* Guard functions::
+* Page selection helpers::
+* Executing qpdf::
+@end menu
+
+@node Guard functions
+@section Guard functions
+
+@findex pdf-tools-pages-ensure-pdf-view-mode
+@findex pdf-tools-pages-ensure-qpdf
+@findex pdf-tools-pages-ensure-selection
+The package uses three guard functions to validate preconditions before performing operations. These are called internally by the interactive commands, but they are also available for use in custom extensions or hooks.
+
+@code{pdf-tools-pages-ensure-pdf-view-mode} signals a @code{user-error} unless the current buffer is in @code{pdf-view-mode} or a mode derived from it. All interactive commands in the package call this function.
+
+@code{pdf-tools-pages-ensure-qpdf} signals a @code{user-error} unless the @samp{qpdf} executable is found on the system's @samp{PATH}. This is checked when you first invoke @code{pdf-tools-pages-select-dwim}, giving you early feedback rather than failing only at extraction or deletion time.
+
+@code{pdf-tools-pages-ensure-selection} signals a @code{user-error} if the buffer-local selection list is empty. This prevents extraction or deletion commands from being invoked with nothing selected.
+
+@node Page selection helpers
+@section Page selection helpers
+
+@findex pdf-tools-pages-add-page
+@findex pdf-tools-pages-remove-page
+@findex pdf-tools-pages-get-current-selection
+@code{pdf-tools-pages-add-page} adds the current page number to the selection list, maintaining sorted order. It displays a message with the updated selection.
+
+@code{pdf-tools-pages-remove-page} removes the current page number from the selection list. If the selection becomes empty, the message reflects this.
+
+@code{pdf-tools-pages-get-current-selection} returns the current selection as a human-readable string (e.g., @samp{"Current selection: (1 3 5)."}). This function is used by the commands to provide echo-area feedback and confirmation prompts.
+
+@node Executing qpdf
+@section Executing qpdf
+
+@findex pdf-tools-pages-execute-qpdf
+@code{pdf-tools-pages-execute-qpdf} is the low-level function that invokes the @samp{qpdf} command-line tool. It accepts a list of page numbers and an optional output file path. When no output file is provided, it passes @samp{--replace-input} to @samp{qpdf}, which modifies the file in place.
+
+The function uses @code{call-process} rather than @code{shell-command} to avoid shell injection vulnerabilities --- filenames containing special characters (spaces, quotes, semicolons) are passed directly as process arguments without shell interpolation.
+
+The function checks @samp{qpdf}'s exit code: 0 indicates success, 3 indicates warnings (the operation still succeeded), and any other value causes a @code{user-error}.
+
+@node Variables
+@chapter Variables
+
+@menu
+* @code{pdf-tools-pages-selected-pages}::
+@end menu
+
+@node @code{pdf-tools-pages-selected-pages}
+@section @code{pdf-tools-pages-selected-pages}
+
+@vindex pdf-tools-pages-selected-pages
+The buffer-local variable @code{pdf-tools-pages-selected-pages} holds the list of page numbers currently selected for extraction or deletion. The list is kept in ascending sorted order.
+
+Because this variable is buffer-local (defined with @code{defvar-local}), each PDF buffer maintains its own independent selection. Switching between PDF buffers preserves each buffer's selection state.
+
+The default value is an empty list. The selection is populated by @code{pdf-tools-pages-select-dwim} (@ref{Selecting pages}) and cleared by @code{pdf-tools-pages-clear-page-selection} or automatically after a successful extraction or deletion.
+
+@node Troubleshooting
+@chapter Troubleshooting
+
+@menu
+* qpdf not found::
+* Command only works in pdf-view-mode::
+* Reporting issues::
+@end menu
+
+@node qpdf not found
+@section qpdf not found
+
+If you see the error @samp{"This package requires `qpdf'"}, ensure that @samp{qpdf} is installed and that its location is included in your system's @samp{PATH}. On macOS, if you installed @samp{qpdf} via Homebrew but Emacs cannot find it, you may need to configure @code{exec-path} or use a package like @samp{exec-path-from-shell} to synchronize your shell's @samp{PATH} with Emacs.
+
+@node Command only works in pdf-view-mode
+@section Command only works in pdf-view-mode
+
+All interactive commands in this package require the current buffer to be in @code{pdf-view-mode}. If you see the error @samp{"This command can only be used in a `pdf-view-mode' buffer"}, make sure you are viewing a PDF file with @samp{pdf-tools} active. If Emacs opens PDFs with @code{doc-view-mode} instead, ensure that @samp{pdf-tools} is installed and that you have called @code{pdf-tools-install}.
+
+@node Reporting issues
+@section Reporting issues
+
+If you encounter problems, please open an issue at the @uref{https://github.com/benthamite/pdf-tools-pages/issues, GitHub issue tracker}. Include the Emacs version (@samp{M-x emacs-version}), the @samp{qpdf} version (@samp{qpdf --version} in a terminal), and a description of what you expected to happen versus what actually happened.
+
+@node Indices
+@chapter Indices
+
+@menu
+* Function index::
+* Variable index::
+@end menu
+
+@node Function index
+@section Function index
+
+@printindex fn
+
+@node Variable index
+@section Variable index
+
+@printindex vr
+
+@bye
