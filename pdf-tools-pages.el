@@ -4,7 +4,8 @@
 
 ;; Author: Pablo Stafforini
 ;; URL: https://github.com/benthamite/pdf-tools-pages
-;; Version: 0.1
+;; Version: 0.2
+;; Package-Requires: ((emacs "26.1") (pdf-tools "1.0"))
 
 ;; This file is NOT part of GNU Emacs.
 
@@ -27,55 +28,67 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'pdf-tools)
 
 ;;;; Variables
 
-(defvar pdf-tools-pages-selected-pages '()
-  "List of pages selected for extraction.")
+(defvar-local pdf-tools-pages-selected-pages '()
+  "List of pages selected for extraction.
+This variable is buffer-local so that each PDF buffer maintains its own
+independent page selection.")
 
 ;;;; Functions
 
+;;;;; Ensure
+
+(defun pdf-tools-pages-ensure-pdf-view-mode ()
+  "Signal an error unless the current buffer is in `pdf-view-mode'."
+  (unless (derived-mode-p 'pdf-view-mode)
+    (user-error "This command can only be used in a `pdf-view-mode' buffer")))
+
+(defun pdf-tools-pages-ensure-qpdf ()
+  "Signal an error unless `qpdf' is installed and available."
+  (unless (executable-find "qpdf")
+    (user-error "This package requires `qpdf' (https://github.com/qpdf/qpdf)")))
+
+(defun pdf-tools-pages-ensure-selection ()
+  "Signal an error unless there are pages selected."
+  (unless pdf-tools-pages-selected-pages
+    (user-error "No pages selected")))
+
+;;;;; Selection
+
 ;;;###autoload
 (defun pdf-tools-pages-select-dwim ()
-  "Add current page to the selection, or remove it if already included."
+  "Add current page to the selection, or remove it if already included.
+After toggling, advance to the next page if not on the last page."
   (interactive)
+  (pdf-tools-pages-ensure-pdf-view-mode)
   (pdf-tools-pages-ensure-qpdf)
   (if (member (pdf-view-current-page) pdf-tools-pages-selected-pages)
       (pdf-tools-pages-remove-page)
     (pdf-tools-pages-add-page))
   (when (< (pdf-view-current-page) (pdf-cache-number-of-pages))
-    (pdf-view-next-page))
-  (setq pdf-tools-pages-selected-pages (sort pdf-tools-pages-selected-pages #'<)))
+    (pdf-view-next-page)))
 
 (defun pdf-tools-pages-add-page ()
   "Add current page number to list of selected pages."
-  (add-to-list 'pdf-tools-pages-selected-pages (pdf-view-current-page) t)
-  (setq pdf-tools-pages-selected-pages (sort pdf-tools-pages-selected-pages #'<))
+  (let ((page (pdf-view-current-page)))
+    (unless (member page pdf-tools-pages-selected-pages)
+      (push page pdf-tools-pages-selected-pages)
+      (setq pdf-tools-pages-selected-pages
+            (sort pdf-tools-pages-selected-pages #'<))))
   (message (concat "Page added. " (pdf-tools-pages-get-current-selection))))
 
 (defun pdf-tools-pages-remove-page ()
   "Remove current page number from list of selected pages."
-  (setq pdf-tools-pages-selected-pages (delete (pdf-view-current-page) pdf-tools-pages-selected-pages)
-        pdf-tools-pages-selected-pages (sort pdf-tools-pages-selected-pages #'<))
+  (setq pdf-tools-pages-selected-pages
+        (delq (pdf-view-current-page) pdf-tools-pages-selected-pages))
   (message (concat "Page removed. "
-		   (if pdf-tools-pages-selected-pages
-		       (pdf-tools-pages-get-current-selection)
-		     "There are currently no selected pages"))))
-
-;;;;; Ensure
-
-(defun pdf-tools-pages-ensure-qpdf ()
-  "Check if `qpdf' is installed and available."
-  (unless (executable-find "qpdf")
-    (user-error "This package requires `qpdf' (https://github.com/qpdf/qpdf)")))
-
-(defun pdf-tools-pages-ensure-selection ()
-  "Ensure that there are pages selected."
-  (unless pdf-tools-pages-selected-pages
-    (user-error "No pages selected")))
-
-;;;;; Selection
+                   (if pdf-tools-pages-selected-pages
+                       (pdf-tools-pages-get-current-selection)
+                     "There are currently no selected pages."))))
 
 (defun pdf-tools-pages-get-current-selection ()
   "Return the current selection of pages as a string."
@@ -94,6 +107,7 @@
 (defun pdf-tools-pages-extract-selected-pages (file)
   "Save pages selected in `pdf-tools-pages-selected-pages' to FILE."
   (interactive "FOutput file: ")
+  (pdf-tools-pages-ensure-pdf-view-mode)
   (pdf-tools-pages-ensure-selection)
   (pdf-tools-pages-execute-qpdf pdf-tools-pages-selected-pages file)
   (pdf-tools-pages-clear-page-selection))
@@ -102,6 +116,7 @@
 (defun pdf-tools-pages-delete-selected-pages ()
   "Delete pages selected in `pdf-tools-pages-selected-pages' from current file."
   (interactive)
+  (pdf-tools-pages-ensure-pdf-view-mode)
   (pdf-tools-pages-ensure-selection)
   (when (yes-or-no-p (concat (pdf-tools-pages-get-current-selection)
                              " Delete selected pages from current PDF? "))
@@ -115,17 +130,21 @@
 
 (defun pdf-tools-pages-execute-qpdf (pages &optional output-file)
   "Execute qpdf command on PAGES with optional OUTPUT-FILE.
-If OUTPUT-FILE is nil, modify the input file in place."
-  (let ((output (or output-file "--replace-input")))
-    (condition-case err
-        (shell-command
-         (format "qpdf '%s' --pages . %s -- %s"
-                 (buffer-file-name)
-                 (mapconcat #'number-to-string pages ",")
-                 output))
-      (error (user-error "Failed to execute qpdf command: %s"
-                         (error-message-string err))))))
+If OUTPUT-FILE is nil, modify the input file in place.
+Uses `call-process' to avoid shell injection vulnerabilities."
+  (let* ((input-file (buffer-file-name))
+         (page-spec (mapconcat #'number-to-string pages ","))
+         (args (if output-file
+                   (list input-file "--pages" "." page-spec "--"
+                         (expand-file-name output-file))
+                 (list input-file "--pages" "." page-spec "--"
+                       "--replace-input")))
+         (exit-code (apply #'call-process "qpdf" nil nil nil args)))
+    ;; qpdf exit code 0 = success, 3 = warnings (operation succeeded).
+    ;; Any other code indicates failure.
+    (unless (memq exit-code '(0 3))
+      (user-error "qpdf failed (exit code %d); check *Messages* for details"
+                  exit-code))))
 
 (provide 'pdf-tools-pages)
 ;;; pdf-tools-pages.el ends here
-
