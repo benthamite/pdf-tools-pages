@@ -1,43 +1,82 @@
-#+title: pdf-tools-pages
+#+title: pdf-tools-pages: Extract and delete pages in PDF documents
+#+author: Pablo Stafforini
+#+email: pablo@stafforini.com
+#+language: en
+#+options: ':t toc:t author:t email:t num:t
+#+startup: content
+#+export_file_name: pdf-tools-pages.info
+#+texinfo_filename: pdf-tools-pages.info
+#+texinfo_dir_category: Emacs misc features
+#+texinfo_dir_title: pdf-tools-pages: (pdf-tools-pages)
+#+texinfo_dir_desc: Extract and delete pages in PDF documents
 
-** Introduction
+This manual describes the features and customization options for the Emacs Lisp file =pdf-tools-pages.el=.
+
+* Overview
 :PROPERTIES:
-:ID:       4A8A223D-79FA-4D58-A1B8-EAAA6C0FA843
+:CUSTOM_ID: h:overview
 :END:
 
-This is a very simple extension for [[https://github.com/vedang/pdf-tools][pdf-tools]] that supports (1) extracting a selection of pages from a PDF into a new file and (2) deleting a selection of pages from the current PDF.
+=pdf-tools-pages.el= extends =pdf-tools=, the Emacs PDF viewer, with page-level manipulation capabilities. While =pdf-tools= provides excellent support for viewing, annotating, and searching PDF documents, it does not offer built-in commands for structural operations such as extracting a subset of pages into a new file or removing unwanted pages from an existing document. =pdf-tools-pages= fills this gap.
+
+The package provides a simple two-phase workflow:
+
+1. *Select pages.* Navigate through the PDF and toggle pages into a selection set using a single DWIM command. The selection is maintained per buffer, so you can work with multiple PDFs simultaneously without interference.
+
+2. *Act on the selection.* Either extract the selected pages to a new PDF file or delete them from the current document.
+
+Under the hood, page manipulation is performed by [[https://github.com/qpdf/qpdf][qpdf]], a mature command-line tool for structural, content-preserving transformations of PDF files. =qpdf= must be installed separately.
+
+* Installation
+:PROPERTIES:
+:CUSTOM_ID: h:installation
+:END:
 
 ** Requirements
 :PROPERTIES:
-:ID:       65150A43-0D62-454D-8F0A-D11CBE6B6858
+:CUSTOM_ID: h:requirements
 :END:
 
-This package requires [[https://github.com/qpdf/qpdf][qpdf]].
+=pdf-tools-pages= requires:
 
-** Installation
+- Emacs 26.1 or later.
+- =pdf-tools= 1.0 or later, installed and configured.
+- [[https://github.com/qpdf/qpdf][qpdf]], available on your system's =PATH=.
+
+On macOS, you can install =qpdf= with Homebrew:
+
+#+begin_src shell
+brew install qpdf
+#+end_src
+
+On Debian/Ubuntu:
+
+#+begin_src shell
+sudo apt install qpdf
+#+end_src
+
+The package checks for the presence of =qpdf= at runtime and signals a clear error if it is not found.
+
+** Manual installation
 :PROPERTIES:
-:ID:       87EB5F3F-5F66-4226-96C7-25188113FBAB
+:CUSTOM_ID: h:manual-installation
 :END:
 
-*** Manual installation
-:PROPERTIES:
-:ID:       90C3E754-E5C3-4406-A48E-24B932279F6C
-:END:
-
-Clone this repository and add this to your =init.el= file:
+Clone the repository and add it to your load path:
 
 #+begin_src emacs-lisp
 (add-to-list 'load-path "path/to/pdf-tools-pages")
+(require 'pdf-tools-pages)
 #+end_src
 
-Where ="path/to/pdf-tools-pages"= is the path to the local repository you just cloned.
+Replace ="path/to/pdf-tools-pages"= with the actual path to your local clone.
 
-*** Package managers
+** Package managers
 :PROPERTIES:
-:ID:       D8EC85D1-23DB-4E1F-B85A-7260441A9BFA
+:CUSTOM_ID: h:package-managers
 :END:
 
-If you use a package manager, or Emacs +30, you just need to add this your =init.el= file:
+If you use a package manager, or Emacs 30 or later (which ships with ~package-vc~), add the appropriate recipe to your =init.el=:
 
 #+begin_src emacs-lisp
 ;; with vc (Emacs 30 or later)
@@ -61,20 +100,161 @@ If you use a package manager, or Emacs +30, you just need to add this your =init
   :after pdf-tools)
 #+end_src
 
-** Usage
+The =:after pdf-tools= clause ensures that =pdf-tools-pages= is loaded only after =pdf-tools= is available.
+
+* Commands
 :PROPERTIES:
-:ID:       5461115B-C7B1-4473-932D-DFFEFC77C512
+:CUSTOM_ID: h:commands
 :END:
 
-=M-x pdf-tools-pages-select-dwim= to add the current page to the selection, or to remove it if already selected.
-
-Then
-- =pdf-tools-extras-extract-selected-pages= to extract the selected pages to a new PDF.
-- =pdf-tools-extras-delete-selected-pages= to delete the selected pages from the current PDF.
-
-** Troubleshooting
+** Selecting pages
 :PROPERTIES:
-:ID:       29953F58-13B4-4C84-827C-B1098D1BF205
+:CUSTOM_ID: h:selecting-pages
 :END:
 
-The package has not been extensively tested. If you encounter any problems, feel free to open an issue.
+#+findex: pdf-tools-pages-select-dwim
+#+findex: pdf-tools-pages-clear-page-selection
+The primary entry point is =M-x pdf-tools-pages-select-dwim=. This command toggles the current page in the selection: if the page is not yet selected, it adds it; if it is already selected, it removes it. After toggling, the command automatically advances to the next page (unless you are on the last page), which makes it convenient to walk through a document selecting or deselecting pages in sequence.
+
+Each invocation of ~pdf-tools-pages-select-dwim~ displays a message in the echo area confirming whether the page was added or removed, along with the full current selection. This gives you continuous feedback without needing to inspect a variable.
+
+The selection is maintained in the buffer-local variable ~pdf-tools-pages-selected-pages~ ([[#h:pdf-tools-pages-selected-pages][Variables]]). Because the variable is buffer-local, each PDF buffer keeps its own independent selection. You can freely switch between PDF buffers without losing or mixing up your selections.
+
+If you want to discard the current selection and start over, use =M-x pdf-tools-pages-clear-page-selection=. This resets the selection to an empty list and confirms the action in the echo area.
+
+A typical workflow looks like this:
+
+1. Open a PDF in =pdf-view-mode=.
+2. Navigate to a page you want to select and call =M-x pdf-tools-pages-select-dwim=.
+3. Repeat for additional pages. The command advances automatically, so for consecutive pages you can simply invoke it repeatedly.
+4. Once your selection is complete, extract or delete the pages ([[#h:extracting-and-deleting-pages][Extracting and deleting pages]]).
+
+You may find it convenient to bind ~pdf-tools-pages-select-dwim~ to a key in ~pdf-view-mode-map~:
+
+#+begin_src emacs-lisp
+(define-key pdf-view-mode-map (kbd "C-c s") #'pdf-tools-pages-select-dwim)
+#+end_src
+
+** Extracting and deleting pages
+:PROPERTIES:
+:CUSTOM_ID: h:extracting-and-deleting-pages
+:END:
+
+#+findex: pdf-tools-pages-extract-selected-pages
+#+findex: pdf-tools-pages-delete-selected-pages
+Once you have selected one or more pages ([[#h:selecting-pages][Selecting pages]]), two commands let you act on the selection:
+
+~pdf-tools-pages-extract-selected-pages~ prompts for an output file path and writes the selected pages to that file as a new PDF. The original document is not modified. After a successful extraction, the selection is automatically cleared. This is useful when you want to pull specific pages out of a large document --- for example, extracting a single chapter from a book or a few relevant pages from a report.
+
+~pdf-tools-pages-delete-selected-pages~ removes the selected pages from the current PDF file. Because this is a destructive operation, the command asks for explicit confirmation via ~yes-or-no-p~ before proceeding. The confirmation prompt displays the current selection so you can review which pages will be removed. After deletion, the buffer is automatically reverted to reflect the modified file, and the selection is cleared.
+
+Internally, deletion works by computing the complement of the selection (the pages to /keep/) and asking =qpdf= to rewrite the file with only those pages. The =--replace-input= flag is used, which means =qpdf= creates a temporary file and atomically replaces the original. Note that =qpdf= leaves a backup file with the suffix =.~qpdf-orig= alongside the original; the package does not remove this backup automatically.
+
+Both commands verify that the current buffer is in ~pdf-view-mode~ and that a non-empty selection exists before proceeding. If either condition is not met, a ~user-error~ is signaled.
+
+* Functions
+:PROPERTIES:
+:CUSTOM_ID: h:functions
+:END:
+
+** Guard functions
+:PROPERTIES:
+:CUSTOM_ID: h:guard-functions
+:END:
+
+#+findex: pdf-tools-pages-ensure-pdf-view-mode
+#+findex: pdf-tools-pages-ensure-qpdf
+#+findex: pdf-tools-pages-ensure-selection
+The package uses three guard functions to validate preconditions before performing operations. These are called internally by the interactive commands, but they are also available for use in custom extensions or hooks.
+
+~pdf-tools-pages-ensure-pdf-view-mode~ signals a ~user-error~ unless the current buffer is in ~pdf-view-mode~ or a mode derived from it. All interactive commands in the package call this function.
+
+~pdf-tools-pages-ensure-qpdf~ signals a ~user-error~ unless the =qpdf= executable is found on the system's =PATH=. This is checked when you first invoke ~pdf-tools-pages-select-dwim~, giving you early feedback rather than failing only at extraction or deletion time.
+
+~pdf-tools-pages-ensure-selection~ signals a ~user-error~ if the buffer-local selection list is empty. This prevents extraction or deletion commands from being invoked with nothing selected.
+
+** Page selection helpers
+:PROPERTIES:
+:CUSTOM_ID: h:page-selection-helpers
+:END:
+
+#+findex: pdf-tools-pages-add-page
+#+findex: pdf-tools-pages-remove-page
+#+findex: pdf-tools-pages-get-current-selection
+~pdf-tools-pages-add-page~ adds the current page number to the selection list, maintaining sorted order. It displays a message with the updated selection.
+
+~pdf-tools-pages-remove-page~ removes the current page number from the selection list. If the selection becomes empty, the message reflects this.
+
+~pdf-tools-pages-get-current-selection~ returns the current selection as a human-readable string (e.g., ="Current selection: (1 3 5)."=). This function is used by the commands to provide echo-area feedback and confirmation prompts.
+
+** Executing qpdf
+:PROPERTIES:
+:CUSTOM_ID: h:executing-qpdf
+:END:
+
+#+findex: pdf-tools-pages-execute-qpdf
+~pdf-tools-pages-execute-qpdf~ is the low-level function that invokes the =qpdf= command-line tool. It accepts a list of page numbers and an optional output file path. When no output file is provided, it passes =--replace-input= to =qpdf=, which modifies the file in place.
+
+The function uses ~call-process~ rather than ~shell-command~ to avoid shell injection vulnerabilities --- filenames containing special characters (spaces, quotes, semicolons) are passed directly as process arguments without shell interpolation.
+
+The function checks =qpdf='s exit code: 0 indicates success, 3 indicates warnings (the operation still succeeded), and any other value causes a ~user-error~.
+
+* Variables
+:PROPERTIES:
+:CUSTOM_ID: h:variables
+:END:
+
+** ~pdf-tools-pages-selected-pages~
+:PROPERTIES:
+:CUSTOM_ID: h:pdf-tools-pages-selected-pages
+:END:
+
+#+vindex: pdf-tools-pages-selected-pages
+The buffer-local variable ~pdf-tools-pages-selected-pages~ holds the list of page numbers currently selected for extraction or deletion. The list is kept in ascending sorted order.
+
+Because this variable is buffer-local (defined with ~defvar-local~), each PDF buffer maintains its own independent selection. Switching between PDF buffers preserves each buffer's selection state.
+
+The default value is an empty list. The selection is populated by ~pdf-tools-pages-select-dwim~ ([[#h:selecting-pages][Selecting pages]]) and cleared by ~pdf-tools-pages-clear-page-selection~ or automatically after a successful extraction or deletion.
+
+* Troubleshooting
+:PROPERTIES:
+:CUSTOM_ID: h:troubleshooting
+:END:
+
+** qpdf not found
+:PROPERTIES:
+:CUSTOM_ID: h:qpdf-not-found
+:END:
+
+If you see the error ="This package requires `qpdf'"=, ensure that =qpdf= is installed and that its location is included in your system's =PATH=. On macOS, if you installed =qpdf= via Homebrew but Emacs cannot find it, you may need to configure ~exec-path~ or use a package like =exec-path-from-shell= to synchronize your shell's =PATH= with Emacs.
+
+** Command only works in pdf-view-mode
+:PROPERTIES:
+:CUSTOM_ID: h:command-only-works-in-pdf-view-mode
+:END:
+
+All interactive commands in this package require the current buffer to be in ~pdf-view-mode~. If you see the error ="This command can only be used in a `pdf-view-mode' buffer"=, make sure you are viewing a PDF file with =pdf-tools= active. If Emacs opens PDFs with ~doc-view-mode~ instead, ensure that =pdf-tools= is installed and that you have called ~pdf-tools-install~.
+
+** Reporting issues
+:PROPERTIES:
+:CUSTOM_ID: h:reporting-issues
+:END:
+
+If you encounter problems, please open an issue at the [[https://github.com/benthamite/pdf-tools-pages/issues][GitHub issue tracker]]. Include the Emacs version (=M-x emacs-version=), the =qpdf= version (=qpdf --version= in a terminal), and a description of what you expected to happen versus what actually happened.
+
+* Indices
+:PROPERTIES:
+:CUSTOM_ID: h:indices
+:END:
+
+** Function index
+:PROPERTIES:
+:INDEX: fn
+:CUSTOM_ID: h:function-index
+:END:
+
+** Variable index
+:PROPERTIES:
+:INDEX: vr
+:CUSTOM_ID: h:variable-index
+:END:
