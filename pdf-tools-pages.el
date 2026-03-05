@@ -1,6 +1,6 @@
 ;;; pdf-tools-pages.el --- Extract and delete pages in PDF documents -*- lexical-binding: t -*-
 
-;; Copyright (C) 2024
+;; Copyright (C) 2024-2026 Pablo Stafforini
 
 ;; Author: Pablo Stafforini
 ;; URL: https://github.com/benthamite/pdf-tools-pages
