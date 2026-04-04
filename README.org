@@ -9,6 +9,7 @@
 #+texinfo_dir_category: Emacs misc features
 #+texinfo_dir_title: pdf-tools-pages: (pdf-tools-pages)
 #+texinfo_dir_desc: Extract and delete pages in PDF documents
+#+texinfo_header: @c AUTO-GENERATED from README.org via ox-texinfo — do not edit manually.
 
 This manual describes the features and customization options for the Emacs Lisp file =pdf-tools-pages.el=.
 
