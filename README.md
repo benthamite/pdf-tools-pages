@@ -32,21 +32,22 @@ sudo apt install qpdf
 ### package-vc (built-in since Emacs 30)
 
 ```emacs-lisp
-(package-vc-install "https://github.com/benthamite/pdf-tools-pages")
+(use-package pdf-tools-pages
+  :vc (:url "https://github.com/benthamite/pdf-tools-pages"))
 ```
 
 ### Elpaca
 
 ```emacs-lisp
 (use-package pdf-tools-pages
-  :ensure (pdf-tools-pages :host github :repo "benthamite/pdf-tools-pages"))
+  :ensure (:host github :repo "benthamite/pdf-tools-pages"))
 ```
 
 ### straight.el
 
 ```emacs-lisp
-(straight-use-package
- '(pdf-tools-pages :type git :host github :repo "benthamite/pdf-tools-pages"))
+(use-package pdf-tools-pages
+  :straight (:host github :repo "benthamite/pdf-tools-pages"))
 ```
 
 ## Quick start
