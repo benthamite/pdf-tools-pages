@@ -219,6 +219,39 @@ Because this variable is buffer-local (defined with ~defvar-local~), each PDF bu
 
 The default value is an empty list. The selection is populated by ~pdf-tools-pages-select-dwim~ ([[#h:selecting-pages][Selecting pages]]) and cleared by ~pdf-tools-pages-clear-page-selection~ or automatically after a successful extraction or deletion.
 
+* Development
+:PROPERTIES:
+:CUSTOM_ID: h:development
+:END:
+
+** Running tests
+:PROPERTIES:
+:CUSTOM_ID: h:running-tests
+:END:
+
+The package includes a comprehensive ERT test suite in =pdf-tools-pages-test.el=. Because =pdf-tools= requires a compiled C server that cannot run in headless CI environments, all =pdf-tools= functions are mocked with ~cl-letf~. The tests cover page selection, DWIM toggling, qpdf argument construction, exit code handling, buffer-local isolation, and the extract/delete workflows.
+
+To run the tests locally:
+
+#+begin_src shell
+make test
+#+end_src
+
+To byte-compile:
+
+#+begin_src shell
+make compile
+#+end_src
+
+Both targets expect =pdf-tools= to be available as a sibling directory (=../pdf-tools/lisp=), which is the case for elpaca-managed installations.
+
+** Continuous integration
+:PROPERTIES:
+:CUSTOM_ID: h:continuous-integration
+:END:
+
+A GitHub Actions workflow runs byte-compilation and the full test suite on every push and pull request to the =main= branch. Tests are run against Emacs 27.1, 29.4, and 30.1 to ensure broad compatibility.
+
 * Troubleshooting
 :PROPERTIES:
 :CUSTOM_ID: h:troubleshooting
