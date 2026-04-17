@@ -63,7 +63,7 @@ Open a PDF, navigate to a page you want to select, and press `C-c s`. The comman
 
 ## Documentation
 
-For a comprehensive description of all user options, commands, and functions, see the [manual](README.org).
+For a comprehensive description of all user options, commands, and functions, see the [manual](https://stafforini.com/notes/pdf-tools-pages/).
 
 ## License
 
