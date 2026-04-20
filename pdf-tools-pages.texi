@@ -4,6 +4,7 @@
 @settitle pdf-tools-pages: Extract and delete pages in PDF documents
 @documentencoding UTF-8
 @documentlanguage en
+@c AUTO-GENERATED from README.org via ox-texinfo — do not edit manually.
 @c %**end of header
 
 @dircategory Emacs misc features
@@ -33,6 +34,7 @@ This manual describes the features and customization options for the Emacs Lisp 
 * Commands::
 * Functions::
 * Variables::
+* Development::
 * Troubleshooting::
 * Indices::
 
@@ -59,6 +61,11 @@ Functions
 Variables
 
 * @code{pdf-tools-pages-selected-pages}::
+
+Development
+
+* Running tests::
+* Continuous integration::
 
 Troubleshooting
 
@@ -287,6 +294,38 @@ The buffer-local variable @code{pdf-tools-pages-selected-pages} holds the list o
 Because this variable is buffer-local (defined with @code{defvar-local}), each PDF buffer maintains its own independent selection. Switching between PDF buffers preserves each buffer's selection state.
 
 The default value is an empty list. The selection is populated by @code{pdf-tools-pages-select-dwim} (@ref{Selecting pages}) and cleared by @code{pdf-tools-pages-clear-page-selection} or automatically after a successful extraction or deletion.
+
+@node Development
+@chapter Development
+
+@menu
+* Running tests::
+* Continuous integration::
+@end menu
+
+@node Running tests
+@section Running tests
+
+The package includes a comprehensive ERT test suite in @samp{pdf-tools-pages-test.el}. Because @samp{pdf-tools} requires a compiled C server that cannot run in headless CI environments, all @samp{pdf-tools} functions are mocked with @code{cl-letf}. The tests cover page selection, DWIM toggling, qpdf argument construction, exit code handling, buffer-local isolation, and the extract/delete workflows.
+
+To run the tests locally:
+
+@example
+make test
+@end example
+
+To byte-compile:
+
+@example
+make compile
+@end example
+
+Both targets expect @samp{pdf-tools} to be available as a sibling directory (@samp{../pdf-tools/lisp}), which is the case for elpaca-managed installations.
+
+@node Continuous integration
+@section Continuous integration
+
+A GitHub Actions workflow runs byte-compilation and the full test suite on every push and pull request to the @samp{main} branch. Tests are run against Emacs 27.1, 29.4, and 30.1 to ensure broad compatibility.
 
 @node Troubleshooting
 @chapter Troubleshooting
